@@ -1,0 +1,13 @@
+# FLEXO Sensor Simulator Requirements
+# Dependencies untuk menjalankan sensor simulator
+
+# Data Processing
+pandas==2.1.3
+openpyxl==3.1.2
+
+# HTTP Client
+requests==2.31.0
+
+# Optional: untuk development
+pytest==7.4.3  # Testing
+python-dotenv==1.0.0  # Environment variables
