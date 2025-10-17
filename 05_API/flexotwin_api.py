@@ -272,6 +272,12 @@ async def upload_production_file(file: UploadFile = File(...)):
             # This method uses trained models and historical data comparison
             predictions = digital_twin.predict_from_excel(tmp_path)
             
+            # Debug: Log component health values
+            print(f"\n📊 Component Health Analysis:")
+            for comp_name, comp_data in predictions.get('component_health', {}).items():
+                health_value = comp_data.get('health', comp_data.get('health_score', 0))
+                print(f"   {comp_name}: {health_value:.1f}%")
+            
             # Format predictions untuk frontend
             predictions_data = {
                 "oee": round(predictions.get('oee_forecast', 75.0) / 100, 4),  # Convert to 0-1 range
@@ -282,9 +288,10 @@ async def upload_production_file(file: UploadFile = File(...)):
                 "component_health": format_component_health_for_api(predictions.get('component_health', {})),
                 "system_analysis": {
                     "total_components": len(predictions.get('component_health', {})),
-                    "healthy_components": len([c for c in predictions.get('component_health', {}).values() if c.get('health', 0) >= 85]),
-                    "warning_components": len([c for c in predictions.get('component_health', {}).values() if 70 <= c.get('health', 0) < 85]),
-                    "critical_components": len([c for c in predictions.get('component_health', {}).values() if c.get('health', 0) < 70]),
+                    # Threshold sesuai frontend: Sehat ≥70, Perhatian 40-70, Kritis <40
+                    "healthy_components": len([c for c in predictions.get('component_health', {}).values() if c.get('health', c.get('health_score', 0)) >= 70]),
+                    "warning_components": len([c for c in predictions.get('component_health', {}).values() if 40 <= c.get('health', c.get('health_score', 0)) < 70]),
+                    "critical_components": len([c for c in predictions.get('component_health', {}).values() if c.get('health', c.get('health_score', 0)) < 40]),
                     "overall_status": predictions.get('risk_level', 'medium').capitalize()
                 },
                 "maintenance_schedule": generate_maintenance_schedule_from_predictions(predictions.get('component_health', {})),
@@ -293,6 +300,14 @@ async def upload_production_file(file: UploadFile = File(...)):
                 "fishbone_analysis": predictions.get('fishbone_analysis', {}),
                 "fmea_results": predictions.get('fmea_results', {})
             }
+            
+            # Debug: Log system analysis
+            print(f"\n🔍 System Analysis Summary:")
+            print(f"   Total: {predictions_data['system_analysis']['total_components']}")
+            print(f"   Sehat (≥70%): {predictions_data['system_analysis']['healthy_components']}")
+            print(f"   Perhatian (40-70%): {predictions_data['system_analysis']['warning_components']}")
+            print(f"   Kritis (<40%): {predictions_data['system_analysis']['critical_components']}")
+            print(f"   Status: {predictions_data['system_analysis']['overall_status']}")
             
             return APIResponse(
                 success=True,
